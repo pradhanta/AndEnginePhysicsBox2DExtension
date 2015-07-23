@@ -21,9 +21,43 @@ android {
             resources.srcDirs = ['src']
             res.srcDirs = ['res']
             assets.srcDirs = ['assets']
+            jni.srcDirs = [] // This prevents the auto generation of Android.mk
         }
     }
+
+
+
+    task buildNative(type: Exec, description: 'Compile JNI source via NDK') {
+        //def ndkDir = android.plugin.ndkFolder // if this doesn't work try the following
+        def ndkDir = plugins.getPlugin('com.android.library').sdkHandler.getNdkFolder()
+        commandLine "$ndkDir/ndk-build",
+                '-C', file('./').absolutePath, // Change src/main/jni the relative path to your jni source
+                '-j', Runtime.runtime.availableProcessors(),
+                'all',
+                'NDK_DEBUG=1'
+    }
+
+    task cleanNative(type: Exec, description: 'Clean JNI object files') {
+        //def ndkDir = android.plugin.ndkFolder  // if this doesn't work try the following
+        def ndkDir = plugins.getPlugin('com.android.library').sdkHandler.getNdkFolder()
+        commandLine "$ndkDir/ndk-build",
+                '-C', file('./').absolutePath, // Change src/main/jni the relative path to your jni source
+                'clean'
+    }
+
+    clean.dependsOn 'cleanNative'
+
+    tasks.withType(JavaCompile) {
+        compileTask -> compileTask.dependsOn buildNative
+    }
+
+
+
+
+
 }
+
+
 
 dependencies {
     compile project(':lib:andengine')
